@@ -50,14 +50,14 @@ type StudentProfile = {
 };
 
 const defaultStudentProfile: StudentProfile = {
-  faculty: 'Engineering',
-  department: 'Computer Engineering',
-  level: '200',
-  matricNumber: 'UPH/2023/0001',
-  graduationYear: String(new Date().getFullYear() + 2),
-  targetClass: 'First Class',
-  carryoverCourses: 1,
-  probationStatus: 'On Track',
+  faculty: 'Not set',
+  department: 'Not set',
+  level: '',
+  matricNumber: '',
+  graduationYear: '',
+  targetClass: '',
+  carryoverCourses: 0,
+  probationStatus: 'Not set',
 };
 
 export default function DashboardPage() {
@@ -154,9 +154,19 @@ export default function DashboardPage() {
     };
   }, [savedResults]);
 
+  const profileTarget = studentProfile.targetClass || '';
+
   const degreeStatus = useMemo(() => {
     const cgpa = stats.latestCGPA || 0;
-    const target = studentProfile.targetClass;
+    const target = studentProfile.targetClass || '';
+
+    if (!target) {
+      return {
+        required: 0,
+        gap: 0,
+        status: 'Set target',
+      };
+    }
 
     const targetMap: Record<string, number> = {
       'First Class': 4.5,

@@ -62,14 +62,14 @@ export default function SignupPage() {
       localStorage.setItem(
         'cgpa_student_profile',
         JSON.stringify({
-          faculty: 'Not set',
-          department: 'Not set',
-          level: '100',
+          faculty: '',
+          department: '',
+          level: '',
           matricNumber: '',
-          graduationYear: String(new Date().getFullYear() + 4),
-          targetClass: 'First Class',
+          graduationYear: '',
+          targetClass: '',
           carryoverCourses: 0,
-          probationStatus: 'On Track',
+          probationStatus: '',
         })
       );
       router.replace('/dashboard');
