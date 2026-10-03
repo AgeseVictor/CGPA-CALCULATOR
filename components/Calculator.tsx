@@ -8,17 +8,39 @@ import SemesterCard from './SemesterCard';
 const STORAGE_KEY = 'cgpa_store_semesters';
 const SCALE_KEY = 'cgpa_store_scale';
 
+interface SavedResult {
+  _id?: string;
+  id?: string;
+  semesterName?: string;
+  scale?: GradingScale;
+  semesters?: Semester[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export default function Calculator() {
   const [scale, setScale] = useState<GradingScale>('5.0');
   const [semesters, setSemesters] = useState<Semester[]>([]);
   const [targetCGPA, setTargetCGPA] = useState<string>('');
   const [remainingUnits, setRemainingUnits] = useState<string>('');
   const [isSaved, setIsSaved] = useState(false);
+  const [user, setUser] = useState<{ id: string; name: string; email: string } | null>(null);
+  const [savedResults, setSavedResults] = useState<SavedResult[]>([]);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Load initial state
   useEffect(() => {
     const savedSemesters = localStorage.getItem(STORAGE_KEY);
     const savedScale = localStorage.getItem(SCALE_KEY);
+    const storedUser = localStorage.getItem('cgpa_user');
+
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        setUser(null);
+      }
+    }
 
     if (savedScale) {
       setScale(savedScale as GradingScale);
@@ -27,7 +49,7 @@ export default function Calculator() {
     if (savedSemesters) {
       try {
         setSemesters(JSON.parse(savedSemesters));
-      } catch (e) {
+      } catch {
         initializeDefault();
       }
     } else {
@@ -35,14 +57,36 @@ export default function Calculator() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    loadSavedResults();
+  }, [user]);
+
+  const loadSavedResults = async () => {
+    const token = localStorage.getItem('cgpa_auth_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch('/api/user/results', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      setSavedResults(Array.isArray(data.savedResults) ? data.savedResults : []);
+    } catch {
+      setSavedResults([]);
+    }
+  };
+
   const initializeDefault = () => {
-    const defaultCourses: Course[] = [
-      { id: '1', code: 'MTH 101', units: 3, grade: 'A' },
-      { id: '2', code: 'CHM 101', units: 3, grade: 'B' },
-      { id: '3', code: 'PHY 101', units: 3, grade: 'C' },
-    ];
     setSemesters([
-      { id: 'sem_1', name: 'Year 1 · 1st Semester', courses: defaultCourses },
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        name: 'Year 1 · 1st Semester',
+        courses: [],
+      },
     ]);
   };
 
@@ -70,11 +114,41 @@ export default function Calculator() {
     setSemesters((prev) => [...prev, newSemester]);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(semesters));
     localStorage.setItem(SCALE_KEY, scale);
+
+    const token = localStorage.getItem('cgpa_auth_token');
+
+    if (token && user) {
+      setSaveState('saving');
+      try {
+        const response = await fetch('/api/user/results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            semesters,
+            scale,
+            semesterName: `Academic result ${savedResults.length + 1}`,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.message || 'Failed to save result');
+
+        setSavedResults((prev) => [data.result, ...prev]);
+        setSaveState('saved');
+      } catch {
+        setSaveState('idle');
+      }
+    }
+
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
+    setTimeout(() => setSaveState('idle'), 1500);
   };
 
   const handleClearAll = () => {
@@ -133,7 +207,7 @@ export default function Calculator() {
             className="flex items-center gap-1.5 px-4 py-2 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-900 transition-colors shadow-sm"
           >
             {isSaved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-            {isSaved ? 'Saved!' : 'Save Scores'}
+            {isSaved ? (saveState === 'saved' ? 'Saved to account' : 'Saved!') : 'Save Scores'}
           </button>
           <button
             onClick={handleClearAll}
@@ -178,6 +252,60 @@ export default function Calculator() {
         <Plus className="h-5 w-5" />
         Add New Semester
       </button>
+
+      {/* Saved Results Section */}
+      <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Saved records</p>
+            <h3 className="text-xl font-black text-gray-900">Your CGPA history</h3>
+          </div>
+          {!user && (
+            <p className="text-sm text-gray-500">
+              Log in to save and grow your academic history.
+            </p>
+          )}
+        </div>
+
+        {!user ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-600">
+            Create an account to keep your results and add new ones as you progress.
+          </div>
+        ) : savedResults.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-sm text-gray-600">
+            No saved results yet. Save your current result to start building your history.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {savedResults.map((result, index) => (
+              <div key={result.id || `${result.semesterName}-${index}`} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{result.semesterName || `Saved result ${index + 1}`}</p>
+                    <p className="text-xs text-gray-500">
+                      {result.scale || scale} scale • {result.semesters?.length || 0} semesters
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (result.semesters) {
+                        setSemesters(result.semesters);
+                        setScale((result.scale as GradingScale) || scale);
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(result.semesters));
+                        localStorage.setItem(SCALE_KEY, (result.scale as GradingScale) || scale);
+                      }
+                    }}
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-100"
+                  >
+                    Load
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
