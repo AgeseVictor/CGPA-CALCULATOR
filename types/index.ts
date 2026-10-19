@@ -17,3 +17,15 @@ export type GradingScale = "4.0" | "5.0";
 export interface GradePointMap {
   [grade: string]: number;
 }
+
+export interface StudentProfile {
+  faculty: string;
+  department: string;
+  level: string;
+  matricNumber: string;
+  graduationYear: string;
+  targetClass: string;
+  carryoverCourses: number;
+  probationStatus: string;
+}
+

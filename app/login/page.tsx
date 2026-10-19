@@ -44,11 +44,11 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/70">
-        <div className="mb-8 text-center">
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8 sm:py-12">
+      <div className="w-full max-w-md rounded-2xl sm:rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xl shadow-slate-200/70">
+        <div className="mb-6 sm:mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-black text-2xl font-black text-white">c</div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900">Welcome back</h1>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Welcome back</h1>
           <p className="mt-2 text-sm text-slate-500">Log in to save and track your CGPA progress.</p>
         </div>
 

@@ -41,6 +41,7 @@ export async function POST(request: Request) {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
+        studentProfile: user.studentProfile || null,
       },
     });
   } catch (error) {

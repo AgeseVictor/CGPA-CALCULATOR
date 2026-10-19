@@ -4,6 +4,16 @@ export interface IUserDocument {
   name: string;
   email: string;
   password: string;
+  studentProfile?: {
+    faculty: string;
+    department: string;
+    level: string;
+    matricNumber: string;
+    graduationYear: string;
+    targetClass: string;
+    carryoverCourses: number;
+    probationStatus: string;
+  };
   savedResults: Array<{
     id?: string;
     semesterName?: string;
@@ -56,11 +66,38 @@ const SavedResultSchema = new Schema(
   { _id: true }
 );
 
+const StudentProfileSchema = new Schema(
+  {
+    faculty: { type: String, default: 'Not set' },
+    department: { type: String, default: 'Not set' },
+    level: { type: String, default: '' },
+    matricNumber: { type: String, default: '' },
+    graduationYear: { type: String, default: '' },
+    targetClass: { type: String, default: '' },
+    carryoverCourses: { type: Number, default: 0 },
+    probationStatus: { type: String, default: 'On Track' },
+  },
+  { _id: false }
+);
+
 const UserSchema = new Schema(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true },
+    studentProfile: {
+      type: StudentProfileSchema,
+      default: () => ({
+        faculty: 'Not set',
+        department: 'Not set',
+        level: '',
+        matricNumber: '',
+        graduationYear: '',
+        targetClass: '',
+        carryoverCourses: 0,
+        probationStatus: 'On Track',
+      }),
+    },
     savedResults: [SavedResultSchema],
   },
   { timestamps: true }
