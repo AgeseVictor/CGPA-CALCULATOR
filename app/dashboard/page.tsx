@@ -17,6 +17,7 @@ import {
   Mail,
   Pencil,
   Sparkles,
+  Trash2,
   UserRound,
   X,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ type UserProfile = {
 };
 
 type SavedResult = {
+  _id?: string;
   id?: string;
   semesterName?: string;
   scale?: GradingScale;
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [successToast, setSuccessToast] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('cgpa_user');
@@ -152,6 +155,38 @@ export default function DashboardPage() {
     localStorage.removeItem('cgpa_user');
     localStorage.removeItem('cgpa_student_profile');
     router.push('/login');
+  };
+
+  const handleDeleteResult = async (resultId: string) => {
+    if (!confirm('Delete this saved result? This action cannot be undone.')) return;
+
+    setDeletingId(resultId);
+    try {
+      const token = localStorage.getItem('cgpa_auth_token');
+      if (!token) throw new Error('Not authenticated');
+
+      const res = await fetch(`/api/user/results?id=${encodeURIComponent(resultId)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Failed to delete result');
+      }
+
+      setSavedResults((prev) => prev.filter((r) => {
+        const id = (r as any)._id || r.id;
+        return id !== resultId;
+      }));
+      setSuccessToast('Result deleted successfully!');
+      setTimeout(() => setSuccessToast(''), 4000);
+    } catch (err: any) {
+      setSuccessToast('');
+      alert(err.message || 'Failed to delete result');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const openEditModal = () => {
@@ -560,8 +595,10 @@ export default function DashboardPage() {
                     ? calculateCGPA(semesters, (result.scale as GradingScale) || '5.0').cgpa
                     : 0;
 
+                  const currentId = (result as any)._id || result.id;
+
                   return (
-                    <div key={result.id || `${result.semesterName}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div key={currentId || `${result.semesterName}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <p className="text-base font-black text-slate-900">{result.semesterName || `Saved result ${index + 1}`}</p>
@@ -575,6 +612,20 @@ export default function DashboardPage() {
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">CGPA</p>
                             <p className="text-lg font-black text-slate-900">{resultCGPA.toFixed(2)}</p>
                           </div>
+                          {currentId && (
+                            <button
+                              onClick={() => handleDeleteResult(currentId)}
+                              disabled={deletingId === currentId}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                              title="Delete this result"
+                            >
+                              {deletingId === currentId ? (
+                                <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
